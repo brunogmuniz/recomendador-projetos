@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+﻿from pydantic import BaseModel, Field
 
 
 class Projeto(BaseModel):
+    id: int | None = None
     numero: str
     titulo: str
     dataInicio: str | None = None
@@ -23,3 +24,9 @@ class PreferenciaTopico(BaseModel):
 class Recomendacao(BaseModel):
     projeto: Projeto
     pontuacao: float
+
+
+class DadosRecomendacao(BaseModel):
+    projetos: list[Projeto]
+    preferencias: list[PreferenciaTopico]
+    limite: int = Field(default=10, ge=1, le=50)

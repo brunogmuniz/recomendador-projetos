@@ -1,6 +1,7 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 import httpx
 
+from app.models import DadosRecomendacao
 from app.recommender import recomendar
 from app.services.java_api import buscar_dados
 
@@ -8,7 +9,7 @@ from app.services.java_api import buscar_dados
 app = FastAPI(
     title="Recomendador de Projetos UFSM",
     description="Recomendação de projetos acadêmicos baseada em conteúdo.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 
@@ -16,38 +17,42 @@ app = FastAPI(
 def health():
     return {"status": "ok"}
 
+@app.post("/debug-body")
+async def debug_body(request: Request):
+    body = await request.body()
 
-@app.get("/recommendations/{usuario_id}")
-async def recomendacoes(
-    usuario_id: int,
-    limite: int = Query(default=10, ge=1, le=50),
-):
-    try:
-        projetos, preferencias = await buscar_dados(usuario_id)
+    return {
+        "content_type": request.headers.get("content-type"),
+        "content_length": request.headers.get("content-length"),
+        "body_size": len(body),
+        "body_preview": body[:200].decode("utf-8", errors="replace"),
+    }
 
-        resultados = recomendar(
-            projetos=projetos,
-            preferencias=preferencias,
-            limite=limite,
-        )
 
-        return {
-            "usuarioId": usuario_id,
-            "quantidade": len(resultados),
-            "recomendacoes": [
-                resultado.model_dump()
-                for resultado in resultados
-            ],
-        }
+@app.post("/debug-body")
+async def debug_body(request: Request):
+    body = await request.body()
 
-    except httpx.HTTPError as erro:
-        raise HTTPException(
-            status_code=502,
-            detail="Não foi possível consultar a API Java.",
-        ) from erro
+    return {
+        "content_type": request.headers.get("content-type"),
+        "content_length": request.headers.get("content-length"),
+        "body_size": len(body),
+        "body_preview": body[:200].decode("utf-8", errors="replace"),
+    }
 
-    except (ValueError, TypeError) as erro:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Não foi possível processar os dados do Java: {erro}",
-        ) from erro
+
+@app.post("/recommendations")
+def recomendar_dados(dados: DadosRecomendacao):
+    resultados = recomendar(
+        projetos=dados.projetos,
+        preferencias=dados.preferencias,
+        limite=dados.limite,
+    )
+
+    return {
+        "quantidade": len(resultados),
+        "recomendacoes": [
+            resultado.model_dump()
+            for resultado in resultados
+        ],
+    }
